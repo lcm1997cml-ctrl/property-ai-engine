@@ -1,0 +1,141 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model Listing {
+  id               String            @id @default(cuid())
+  slug             String            @unique
+  estateName       String            @map("estate_name")
+  buildingName     String?           @map("building_name")
+  district         String
+  subDistrict      String?           @map("sub_district")
+  price            Int?
+  priceMax         Int?              @map("price_max")
+  saleableArea     Int               @map("saleable_area")
+  saleableAreaMax  Int?              @map("saleable_area_max")
+  grossArea        Int?              @map("gross_area")
+  psf              Int?
+  bedrooms         Int
+  bathrooms        Int?
+  propertyType     String            @default("住宅") @map("property_type")
+  floor            String?
+  facing           String?
+  age              Int?
+  developer        String?
+  status           String            @default("active")
+  description      String?
+  source           String            @default("28hse")
+  sourceUrl        String?           @map("source_url")
+  sourceType       String            @default("new") @map("source_type")
+  comparisonRole   String            @default("primary") @map("comparison_role")
+  isFeatured       Boolean           @default(false) @map("is_featured")
+  imageUrl         String?           @map("image_url")
+  tags             String[]
+  createdAt        DateTime          @default(now()) @map("created_at")
+  updatedAt        DateTime          @updatedAt @map("updated_at")
+  lastSeenAt       DateTime          @default(now()) @map("last_seen_at")
+  dataCompleteness String            @default("full") @map("data_completeness")
+  titleEn          String?           @map("title_en")
+  titleZh          String?           @map("title_zh")
+  dataQuality      String            @default("normal") @map("data_quality")
+  address          String?
+  completionYear   Int?              @map("completion_year")
+  totalUnitCount   Int?              @map("total_unit_count")
+  descriptionZh    String?           @map("description_zh")
+  media            ListingMedia[]
+  snapshots        ListingSnapshot[]
+  sources          ListingSource[]
+  units            ListingUnit[]
+
+  @@index([district])
+  @@index([sourceType])
+  @@index([price])
+  @@index([slug])
+  @@map("listings")
+}
+
+model ListingUnit {
+  id              String   @id @default(cuid())
+  listingId       String   @map("listing_id")
+  unitLabel       String?  @map("unit_label")
+  roomCount       Int      @map("room_count")
+  saleableArea    Int?     @map("saleable_area")
+  price           Int?
+  pricePerSqft    Int?     @map("price_per_sqft")
+  sourceUrl       String?  @map("source_url")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+  availability    String   @default("unknown")
+  priceMax        Int?     @map("price_max")
+  saleableAreaMax Int?     @map("saleable_area_max")
+  unitCount       Int?     @map("unit_count")
+  listing         Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@map("listing_units")
+}
+
+model ListingMedia {
+  id        String   @id @default(cuid())
+  listingId String   @map("listing_id")
+  mediaType String   @map("media_type")
+  url       String
+  sortOrder Int      @default(0) @map("sort_order")
+  sourceUrl String?  @map("source_url")
+  createdAt DateTime @default(now()) @map("created_at")
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@unique([listingId, url])
+  @@index([listingId])
+  @@map("listing_media")
+}
+
+model ListingSource {
+  id             String   @id @default(cuid())
+  listingId      String   @map("listing_id")
+  sourceName     String   @map("source_name")
+  sourceUrl      String   @map("source_url")
+  crawledAt      DateTime @default(now()) @map("crawled_at")
+  rawPayloadJson String?  @map("raw_payload_json")
+  normalizedHash String?  @map("normalized_hash")
+  listing        Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([sourceUrl])
+  @@index([normalizedHash])
+  @@map("listing_sources")
+}
+
+model ListingSnapshot {
+  id          String   @id @default(cuid())
+  listingId   String   @map("listing_id")
+  snapshotAt  DateTime @default(now()) @map("snapshot_at")
+  payloadJson String   @map("payload_json")
+  listing     Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
+
+  @@index([listingId])
+  @@index([snapshotAt])
+  @@map("listing_snapshots")
+}
+
+model CrawlJob {
+  id              String    @id @default(cuid())
+  jobName         String    @map("job_name")
+  status          String    @default("pending")
+  startedAt       DateTime? @map("started_at")
+  finishedAt      DateTime? @map("finished_at")
+  recordsFound    Int       @default(0) @map("records_found")
+  recordsInserted Int       @default(0) @map("records_inserted")
+  recordsUpdated  Int       @default(0) @map("records_updated")
+  errorMessage    String?   @map("error_message")
+  createdAt       DateTime  @default(now()) @map("created_at")
+
+  @@index([jobName])
+  @@index([status])
+  @@map("crawl_jobs")
+}
