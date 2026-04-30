@@ -4,7 +4,7 @@ import { Search, Calculator, GitCompare, MapPin, ArrowRight, MessageCircle } fro
 import { Button } from "@/components/ui/button";
 import WhatsAppCTA from "@/components/shared/WhatsAppCTA";
 import { WHATSAPP_MESSAGES, SITE_CONFIG } from "@/lib/config";
-import { searchListings } from "@/services/listingService";
+import { getFeaturedListings } from "@/services/listingService";
 import { formatPrice, formatPsf, formatBedrooms, formatArea } from "@/lib/formatters";
 import {
   formatRoomTypePrice,
@@ -16,6 +16,10 @@ import type { EnrichedListing } from "@/types/listing";
 
 const homeDescription =
   "香港樓盤搜尋平台 — 即睇 28Hse 公開渠道更新嘅新樓盤，配對精選同區二手作對比，附按揭月供計算同 WhatsApp 一鍵查詢。覆蓋啟德、將軍澳、沙田、馬鞍山、元朗、大埔、荃灣、屯門、紅磡、北角等熱門地區。";
+
+// ISR: re-render at most every 30 minutes. Vercel serves cached HTML in
+// between, so visitors hit the CDN edge — no DB roundtrip on every request.
+export const revalidate = 1800;
 
 export const metadata: Metadata = {
   title: { absolute: `${SITE_CONFIG.name} — ${SITE_CONFIG.tagline}` },
@@ -40,7 +44,8 @@ export const metadata: Metadata = {
 };
 
 async function FeaturedListings() {
-  const listings = (await searchListings({})).slice(0, 4);
+  // Focused 4-row Prisma query (was: load-all-then-slice — wasteful at scale).
+  const listings = await getFeaturedListings(4);
 
   if (listings.length === 0) {
     return (

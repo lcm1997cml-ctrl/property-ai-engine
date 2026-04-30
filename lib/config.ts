@@ -3,8 +3,11 @@ export const SITE_CONFIG = {
   name: "香港樓盤搜尋",
   tagline: "搵樓、比較、計按揭，一站搞掂",
   description: "香港樓盤搜尋比較工具，按地區、預算、房型搵樓，即時計按揭月供",
-  // Replace with your actual WhatsApp number (include country code, no + or spaces)
-  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "85261234567",
+  // Operator's WhatsApp number — country code 852 (HK) + 91202466.
+  // The env var takes precedence (set in Vercel → Project → Environment Variables);
+  // this fallback ensures production still routes correctly if the env var
+  // isn't set yet.
+  whatsappNumber: process.env.NEXT_PUBLIC_WHATSAPP_NUMBER || "85291202466",
 };
 
 // WhatsApp message templates for different pages

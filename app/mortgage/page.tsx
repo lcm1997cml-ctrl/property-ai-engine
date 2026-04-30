@@ -34,6 +34,9 @@ interface PageProps {
   searchParams: Promise<Record<string, string>>;
 }
 
+// ISR: 1 hour — page itself is just a calculator + listing dropdown source.
+export const revalidate = 3600;
+
 export default async function MortgagePage({ searchParams }: PageProps) {
   const params = await searchParams;
   // Allow pre-filling price from listing detail page (?price=11400000 or ?price=11,400,000)

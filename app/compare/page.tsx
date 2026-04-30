@@ -33,6 +33,10 @@ interface PageProps {
   searchParams: Promise<Record<string, string | string[]>>;
 }
 
+// ISR: 1 hour — compare data changes slowly relative to user interactions
+// (which all happen client-side after initial load).
+export const revalidate = 3600;
+
 export default async function ComparePage({ searchParams }: PageProps) {
   const params = await searchParams;
   // ids can be repeated: ?ids=lst-001&ids=lst-002 or ?ids=lst-001,lst-002

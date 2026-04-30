@@ -2,6 +2,10 @@ import type { MetadataRoute } from "next";
 import { searchListings } from "@/services/listingService";
 import { DISTRICTS } from "@/types/listing";
 
+// Sitemap is regenerated at most once per hour — sitemaps don't need to be
+// fresh-to-the-second, and we don't want every Googlebot crawl to hit the DB.
+export const revalidate = 3600;
+
 /**
  * Dynamic sitemap — listed at /sitemap.xml.
  *

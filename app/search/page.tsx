@@ -14,6 +14,10 @@ interface PageProps {
   searchParams: Promise<Record<string, string>>;
 }
 
+// ISR: each unique filter combo gets cached for 30 minutes. Subsequent
+// visitors hitting the same /search?district=X&bedrooms=Y URL hit edge cache.
+export const revalidate = 1800;
+
 function parseBedroomsParam(raw: string | undefined): BedroomFilter | undefined {
   if (!raw) return undefined;
   if (raw === "4plus" || raw === "gte4") return "gte4";

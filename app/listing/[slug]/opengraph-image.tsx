@@ -18,6 +18,9 @@ export const alt = "樓盤資訊";
 export const size = { width: 1200, height: 630 };
 export const contentType = "image/png";
 
+// OG image rarely needs to update — cache for 24 hours.
+export const revalidate = 86400;
+
 interface PageProps {
   params: { slug: string };
 }

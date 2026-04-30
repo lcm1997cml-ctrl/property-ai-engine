@@ -26,6 +26,10 @@ interface PageProps {
   params: Promise<{ slug: string }>;
 }
 
+// ISR: each listing detail page gets cached for 30 minutes after first render.
+// Repeat visits hit the Vercel edge cache instead of running 3 DB queries.
+export const revalidate = 1800;
+
 // ── Chinese-description picker ──────────────────────────────────────────────
 //
 // The 28hse crawler historically stored either Chinese or English text into

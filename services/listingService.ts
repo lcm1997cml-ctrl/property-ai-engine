@@ -7,6 +7,7 @@
  * Frontend must NEVER import mock data directly. All data access goes through here.
  */
 
+import { cache } from "react";
 import type {
   NormalizedListing,
   AIInsight,
@@ -584,19 +585,55 @@ export async function searchListings(params: SearchParams): Promise<EnrichedList
   return listings.map((l) => ({ ...l, roomTypes: roomTypesMap.get(l.id) ?? [] }));
 }
 
-/** Get a single listing by slug. */
-export async function getListingBySlug(slug: string): Promise<EnrichedListing | null> {
-  if (USE_MOCK_DATA) {
-    const all = await getMockListings();
-    const listing = all.find((l) => l.slug === slug);
-    if (!listing) return null;
-    return { ...listing, insight: await getMockInsight(listing.id) };
-  }
+/**
+ * Get a single listing by slug.
+ *
+ * Wrapped with React's `cache()` so the same render-pass tree (e.g.
+ * `generateMetadata` + page body + dynamic OG image) shares a single DB
+ * roundtrip instead of issuing the query 3× per request.
+ */
+export const getListingBySlug = cache(
+  async (slug: string): Promise<EnrichedListing | null> => {
+    if (USE_MOCK_DATA) {
+      const all = await getMockListings();
+      const listing = all.find((l) => l.slug === slug);
+      if (!listing) return null;
+      return { ...listing, insight: await getMockInsight(listing.id) };
+    }
 
-  const listing = await getListingBySlugFromDB(slug);
-  if (!listing) return null;
-  return { ...listing };
-}
+    const listing = await getListingBySlugFromDB(slug);
+    if (!listing) return null;
+    return { ...listing };
+  }
+);
+
+/**
+ * Focused query for the homepage featured strip / similar small surfaces.
+ *
+ * Replaces the wasteful `searchListings({}).slice(0, N)` pattern, which
+ * fetched ALL listings + ALL their room-type rows just to render N cards.
+ * This version asks Prisma for exactly N rows, ordered to match the default
+ * search behaviour (full-price before partial, newest first).
+ */
+export const getFeaturedListings = cache(
+  async (limit: number = 4): Promise<EnrichedListing[]> => {
+    if (USE_MOCK_DATA) {
+      const mock = await getMockListings();
+      return attachMockInsights(mock.slice(0, limit));
+    }
+
+    const { prisma } = await import("@/lib/db");
+    const rows = await prisma.listing.findMany({
+      where: { status: "active" },
+      orderBy: [{ dataCompleteness: "asc" }, { createdAt: "desc" }],
+      take: limit,
+    });
+    const listings = rows.map(dbListingToNormalized);
+    const ids = listings.map((l) => l.id);
+    const roomTypesMap = await getListingRoomTypesBatchFromDB(ids);
+    return listings.map((l) => ({ ...l, roomTypes: roomTypesMap.get(l.id) ?? [] }));
+  }
+);
 
 /** Get multiple listings by IDs (for compare page). */
 export async function getListingsByIds(ids: string[]): Promise<EnrichedListing[]> {
