@@ -29,6 +29,18 @@
  * — NOT specific 放盤. Tagged 「屋苑成交參考」 so users understand it's a
  * benchmark, not a live listing.
  *
+ * ⚠️ ACCURACY POLICY ⚠️
+ *   ONLY include a `bedrooms` entry for a unit type that ACTUALLY exists in
+ *   that estate's current market supply. Don't add 1房/2房 entries
+ *   "to make the table look complete" — fabricating a price for a unit type
+ *   the estate doesn't have is worse than omitting that row entirely.
+ *   When in doubt, omit and let the comparison table show fewer rows.
+ *
+ *   Periodically verify each estate's unit mix against:
+ *     • 28Hse / Centaline / Midland recent transactions
+ *     • the estate's actual deed plans
+ *     • on-the-ground agent input
+ *
  * Idempotent: upserts by slug; safe to re-run.
  *
  * Usage (from repo root):
@@ -151,12 +163,15 @@ const SEED: SeedEstate[] = [
     developer: "新鴻基地產",
     tags: ["港鐵站上蓋", "成熟屋苑"],
     descriptionZh:
-      "名城係大圍站上蓋大型屋苑，會所配套齊備。供應由1房至3房，呎價約HK$17,500-18,000，係大圍二手主力對比盤。",
+      "名城係大圍站上蓋大型屋苑，會所配套齊備。主打3房戶型，係大圍二手三房主力對比盤。",
     comparisonSummary:
-      "新樓2房同價位面積較細；名城提供15年樓齡與成熟會所配套。",
+      "新樓3房同價位面積較細；名城提供15年樓齡與成熟會所配套。",
+    // NOTE: 名城 actually only ships 3房 in this featured-comparison context.
+    // Earlier versions of this seed mistakenly included fabricated 1房 / 2房
+    // entries — those room types do not exist in 名城 inventory and have been
+    // removed (per operator correction). Always verify a unit type exists in
+    // current market supply before adding a row.
     units: [
-      { bedrooms: 1, saleableAreaMin: 320, saleableAreaMax: 380, priceMin: 5_800_000, priceMax: 6_500_000 },
-      { bedrooms: 2, saleableAreaMin: 410, saleableAreaMax: 470, priceMin: 7_200_000, priceMax: 8_400_000 },
       { bedrooms: 3, saleableAreaMin: 540, saleableAreaMax: 620, priceMin: 9_800_000, priceMax: 11_500_000 },
     ],
   },

@@ -2,8 +2,33 @@ import type { Metadata } from "next";
 import MortgageCalculator from "./MortgageCalculator";
 import { getAllListings } from "@/services/listingService";
 import { parsePropertyPriceInput } from "@/lib/formatters";
+import { absoluteUrl } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "按揭計算機" };
+const mortgageDescription =
+  "香港按揭計算機 — 輸入樓價即時計算每月供款，並推薦預算範圍內的樓盤。支援不同年期、利率、首期。";
+
+export const metadata: Metadata = {
+  title: "按揭計算機",
+  description: mortgageDescription,
+  alternates: {
+    canonical: absoluteUrl("/mortgage"),
+    languages: { "zh-HK": absoluteUrl("/mortgage") },
+  },
+  openGraph: {
+    type: "website",
+    url: absoluteUrl("/mortgage"),
+    title: "按揭計算機",
+    description: mortgageDescription,
+    siteName: "香港樓盤搜尋",
+    locale: "zh_HK",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "按揭計算機",
+    description: mortgageDescription,
+  },
+  keywords: ["按揭計算機", "按揭月供", "樓宇按揭", "Hong Kong mortgage calculator"],
+};
 
 interface PageProps {
   searchParams: Promise<Record<string, string>>;

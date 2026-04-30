@@ -8,6 +8,7 @@ import {
   getSearchDistrictOptions,
 } from "@/services/listingService";
 import type { SearchParams, BedroomFilter, MarketFocus } from "@/types/listing";
+import { absoluteUrl } from "@/lib/seo";
 
 interface PageProps {
   searchParams: Promise<Record<string, string>>;
@@ -54,7 +55,36 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
       : "";
   const parts = [district, focus, bedrooms, maxPrice, minPriceLabel].filter(Boolean);
   const title = parts.length ? `${parts.join(" ")} 樓盤搜尋` : "搜尋樓盤";
-  return { title };
+
+  const description = parts.length
+    ? `${parts.join("、")} 香港樓盤搜尋。新盤為主，附精選同區二手對比，附按揭月供計算。`
+    : "搜尋香港新樓盤、二手對比參考、按揭計算 — 一站搞掂。";
+
+  // Canonical URL — strip transient sort params, keep filter params so each
+  // filtered view has its own canonical / OG.
+  const canonicalParams = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) {
+    if (!v) continue;
+    if (["sortBy", "page"].includes(k)) continue;
+    canonicalParams.set(k, v);
+  }
+  const qs = canonicalParams.toString();
+  const canonical = absoluteUrl(`/search${qs ? `?${qs}` : ""}`);
+
+  return {
+    title,
+    description,
+    alternates: { canonical, languages: { "zh-HK": canonical } },
+    openGraph: {
+      type: "website",
+      url: canonical,
+      title,
+      description,
+      siteName: "香港樓盤搜尋",
+      locale: "zh_HK",
+    },
+    twitter: { card: "summary_large_image", title, description },
+  };
 }
 
 export default async function SearchPage({ searchParams }: PageProps) {

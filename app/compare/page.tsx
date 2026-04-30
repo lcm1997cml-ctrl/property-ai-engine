@@ -2,8 +2,32 @@ import type { Metadata } from "next";
 import { Suspense } from "react";
 import CompareContent from "./CompareContent";
 import { getAllListings, getListingsByIds } from "@/services/listingService";
+import { absoluteUrl } from "@/lib/seo";
 
-export const metadata: Metadata = { title: "比較樓盤" };
+const compareDescription =
+  "最多並列比較4個香港樓盤：實用呎價、月供、戶型、面積、AI 分析一覽，幫你快速揀盤。";
+
+export const metadata: Metadata = {
+  title: "比較樓盤",
+  description: compareDescription,
+  alternates: {
+    canonical: absoluteUrl("/compare"),
+    languages: { "zh-HK": absoluteUrl("/compare") },
+  },
+  openGraph: {
+    type: "website",
+    url: absoluteUrl("/compare"),
+    title: "比較樓盤",
+    description: compareDescription,
+    siteName: "香港樓盤搜尋",
+    locale: "zh_HK",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "比較樓盤",
+    description: compareDescription,
+  },
+};
 
 interface PageProps {
   searchParams: Promise<Record<string, string | string[]>>;

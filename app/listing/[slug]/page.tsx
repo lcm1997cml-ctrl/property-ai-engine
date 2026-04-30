@@ -14,6 +14,12 @@ import {
   formatPrice, formatPriceRange, formatArea,
 } from "@/lib/formatters";
 import { formatRoomTypePsf } from "@/lib/roomTypeDisplay";
+import {
+  absoluteUrl,
+  breadcrumbJsonLd,
+  buildListingDescription,
+  listingJsonLd,
+} from "@/lib/seo";
 import type { RoomTypeSummary } from "@/types/listing";
 
 interface PageProps {
@@ -46,16 +52,52 @@ function pickChineseDescription(listing: {
 export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
   const { slug } = await params;
   const listing = await getListingBySlug(slug);
-  if (!listing) return { title: "樓盤不存在" };
+  if (!listing) {
+    return {
+      title: "樓盤不存在",
+      robots: { index: false, follow: false },
+    };
+  }
   const priceLabel = listing.dataCompleteness === "partial"
     ? "售價待公布"
     : formatPrice(listing.price);
   const displayName = listing.titleZh ?? listing.titleEn ?? listing.estateName;
+  const titleLine = `${displayName} | ${priceLabel} | ${listing.district}`;
+  const description =
+    pickChineseDescription(listing) ?? buildListingDescription(listing);
+  const canonical = absoluteUrl(`/listing/${listing.slug}`);
+
   return {
-    title: `${displayName} | ${priceLabel} | ${listing.district}`,
-    description:
-      pickChineseDescription(listing) ??
-      `${displayName} — ${listing.district}${listing.subDistrict ? ` · ${listing.subDistrict}` : ""}${listing.dataCompleteness === "full" ? ` · ${priceLabel}` : ""}`,
+    title: titleLine,
+    description,
+    alternates: {
+      canonical,
+      languages: { "zh-HK": canonical },
+    },
+    openGraph: {
+      type: "article",
+      url: canonical,
+      title: titleLine,
+      description,
+      siteName: "香港樓盤搜尋",
+      locale: "zh_HK",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: titleLine,
+      description,
+    },
+    keywords: [
+      displayName,
+      listing.district,
+      listing.subDistrict ?? "",
+      "香港樓盤",
+      "樓盤資訊",
+      listing.developer ?? "",
+    ].filter(Boolean) as string[],
+    other: {
+      "og:locale": "zh_HK",
+    },
   };
 }
 
@@ -74,8 +116,27 @@ export default async function ListingDetailPage({ params }: PageProps) {
   // Media for 平面圖 CTA
   // (media fetching can be added later; for now use WhatsApp fallback)
 
+  // ── SEO: structured data ─────────────────────────────────────────────────
+  const jsonLd = listingJsonLd(listing);
+  const breadcrumbs = breadcrumbJsonLd([
+    { name: "首頁", url: "/" },
+    { name: "搜尋樓盤", url: "/search" },
+    { name: listing.district, url: `/search?district=${encodeURIComponent(listing.district)}` },
+    { name: displayName, url: `/listing/${listing.slug}` },
+  ]);
+
   return (
     <div className="max-w-4xl mx-auto px-4 py-8">
+      {/* JSON-LD: RealEstateListing + BreadcrumbList — drives Google rich snippets */}
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
+      />
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbs) }}
+      />
+
       {/* Breadcrumb */}
       <Link
         href="/search"

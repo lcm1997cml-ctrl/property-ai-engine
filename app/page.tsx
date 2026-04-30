@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import Link from "next/link";
 import { Search, Calculator, GitCompare, MapPin, ArrowRight, MessageCircle } from "lucide-react";
 import { Button } from "@/components/ui/button";
@@ -9,8 +10,34 @@ import {
   formatRoomTypePrice,
   computeRoomTypePriceRange,
 } from "@/lib/roomTypeDisplay";
+import { absoluteUrl } from "@/lib/seo";
 import { DISTRICTS } from "@/types/listing";
 import type { EnrichedListing } from "@/types/listing";
+
+const homeDescription =
+  "香港樓盤搜尋平台 — 即睇 28Hse 公開渠道更新嘅新樓盤，配對精選同區二手作對比，附按揭月供計算同 WhatsApp 一鍵查詢。覆蓋啟德、將軍澳、沙田、馬鞍山、元朗、大埔、荃灣、屯門、紅磡、北角等熱門地區。";
+
+export const metadata: Metadata = {
+  title: { absolute: `${SITE_CONFIG.name} — ${SITE_CONFIG.tagline}` },
+  description: homeDescription,
+  alternates: {
+    canonical: absoluteUrl("/"),
+    languages: { "zh-HK": absoluteUrl("/") },
+  },
+  openGraph: {
+    type: "website",
+    url: absoluteUrl("/"),
+    title: SITE_CONFIG.name,
+    description: homeDescription,
+    siteName: SITE_CONFIG.name,
+    locale: "zh_HK",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: SITE_CONFIG.name,
+    description: homeDescription,
+  },
+};
 
 async function FeaturedListings() {
   const listings = (await searchListings({})).slice(0, 4);
@@ -23,8 +50,26 @@ async function FeaturedListings() {
     );
   }
 
+  // JSON-LD ItemList — surfaces the featured listings as a schema.org list to
+  // search engines, helping Google understand the home page is a real-estate
+  // hub, not a generic landing page.
+  const itemListJsonLd = {
+    "@context": "https://schema.org",
+    "@type": "ItemList",
+    itemListElement: listings.map((l, i) => ({
+      "@type": "ListItem",
+      position: i + 1,
+      url: absoluteUrl(`/listing/${l.slug}`),
+      name: l.titleZh ?? l.titleEn ?? l.estateName,
+    })),
+  };
+
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(itemListJsonLd) }}
+      />
       {listings.map((l: EnrichedListing) => (
         <div
           key={l.id}
