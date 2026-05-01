@@ -7,7 +7,7 @@ import {
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import WhatsAppCTA from "@/components/shared/WhatsAppCTA";
-import { getListingBySlug, getListingRoomTypes } from "@/services/listingService";
+import { getListingBySlug } from "@/services/listingService";
 import { SITE_CONFIG, buildWhatsAppUrl } from "@/lib/config";
 import { buildListingInquiryMessage } from "@/lib/whatsappMessages";
 import {
@@ -27,8 +27,30 @@ interface PageProps {
 }
 
 // ISR: each listing detail page gets cached for 30 minutes after first render.
-// Repeat visits hit the Vercel edge cache instead of running 3 DB queries.
+// Repeat visits hit the Vercel edge cache instead of running DB queries.
 export const revalidate = 1800;
+
+/**
+ * Pre-render every active listing's detail page at build time so the first
+ * visitor doesn't pay a DB round-trip. Combined with the `revalidate` above,
+ * every listing page is served as static HTML from Vercel's edge CDN; the
+ * background regeneration only kicks in after the cache window elapses.
+ *
+ * `dynamicParams = true` (the default) keeps newly-crawled listings working
+ * — they render on-demand the first time, then get added to the static set.
+ */
+export async function generateStaticParams(): Promise<Array<{ slug: string }>> {
+  // Local import keeps Prisma out of the bundle when the route is ISR'd
+  // without a build-time pass (e.g. dev mode).
+  const { prisma } = await import("@/lib/db");
+  const rows = await prisma.listing.findMany({
+    where: { status: "active" },
+    select: { slug: true },
+    // Cap to avoid blowing the build timeout on unbounded growth.
+    take: 500,
+  });
+  return rows.map((r) => ({ slug: r.slug }));
+}
 
 // ── Chinese-description picker ──────────────────────────────────────────────
 //
@@ -114,7 +136,9 @@ export default async function ListingDetailPage({ params }: PageProps) {
   const isSuspicious = listing.dataQuality === "suspicious";
   const displayName = listing.titleZh ?? listing.titleEn ?? listing.estateName;
 
-  const roomTypes = await getListingRoomTypes(listing.id);
+  // Room types arrive on the same Prisma query (via include), so no second
+  // round-trip to the DB.
+  const roomTypes = listing.roomTypes ?? [];
   const hasRoomTypes = roomTypes.length > 0;
 
   // Media for 平面圖 CTA

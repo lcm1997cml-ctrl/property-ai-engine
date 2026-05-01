@@ -3,8 +3,15 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
-  url      = env("DATABASE_URL")
+  provider  = "postgresql"
+  // Pooled connection (Supabase pooler port 6543, transaction mode) — used at
+  // runtime by Next.js serverless functions on Vercel. Must include
+  // `?pgbouncer=true&connection_limit=1` for Prisma to behave correctly.
+  url       = env("DATABASE_URL")
+  // Direct connection (port 5432, session mode) — required by Prisma migrations
+  // because pgbouncer transaction mode doesn't support session-level features
+  // (advisory locks, prepared statements) used during `prisma migrate`.
+  directUrl = env("DIRECT_URL")
 }
 
 model Listing {

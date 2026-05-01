@@ -338,11 +338,38 @@ async function searchListingsFromDB(params: SearchParams): Promise<NormalizedLis
   return listings;
 }
 
-async function getListingBySlugFromDB(slug: string): Promise<NormalizedListing | null> {
+/**
+ * Fetch a listing by slug AND its room-type units in ONE Prisma query
+ * (uses `include`). This replaces the old 2-query pattern (findUnique +
+ * follow-up findMany on listing_units), saving a full DB round-trip per
+ * detail-page render — meaningful on Vercel where each round-trip to
+ * Supabase Singapore = ~50–200ms depending on function region.
+ */
+async function getListingBySlugFromDB(slug: string): Promise<EnrichedListing | null> {
   const { prisma } = await import("@/lib/db");
-  const row = await prisma.listing.findUnique({ where: { slug } });
+  const row = await prisma.listing.findUnique({
+    where: { slug },
+    include: {
+      units: { orderBy: { roomCount: "asc" } },
+    },
+  });
   if (!row) return null;
-  return dbListingToNormalized(row);
+  const { units, ...listingRow } = row;
+  const normalized = dbListingToNormalized(listingRow);
+  const roomTypes: RoomTypeSummary[] = units.map((u) => ({
+    id: u.id,
+    unitLabel: u.unitLabel ?? labelFromRoomCount(u.roomCount),
+    roomCount: u.roomCount,
+    minSaleableArea: u.saleableArea ?? undefined,
+    maxSaleableArea: u.saleableAreaMax ?? undefined,
+    minPrice: u.price ?? undefined,
+    maxPrice: u.priceMax ?? undefined,
+    pricePerSqft: u.pricePerSqft ?? undefined,
+    unitCount: u.unitCount ?? undefined,
+    availability: u.availability,
+    confidence: computeRoomTypeConfidence(u),
+  }));
+  return { ...normalized, roomTypes };
 }
 
 async function getListingsByIdsFromDB(ids: string[]): Promise<NormalizedListing[]> {
