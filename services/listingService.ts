@@ -279,6 +279,27 @@ async function searchListingsFromDB(params: SearchParams): Promise<NormalizedLis
     ];
   }
 
+  // ── Free-text name search (q) ───────────────────────────────────────────
+  // Case-insensitive substring match across:
+  //   estateName, titleZh, titleEn, address, developer
+  // Even a single Chinese char works (e.g. "首" → 首岸; "城" → 城市花園 / 沙田第一城).
+  // Combined as additional AND so it still respects district/bedrooms/etc.
+  const qRaw = typeof params.q === "string" ? params.q.trim() : "";
+  if (qRaw) {
+    where.AND = [
+      ...(Array.isArray(where.AND) ? where.AND : []),
+      {
+        OR: [
+          { estateName: { contains: qRaw, mode: "insensitive" } },
+          { titleZh:    { contains: qRaw, mode: "insensitive" } },
+          { titleEn:    { contains: qRaw, mode: "insensitive" } },
+          { address:    { contains: qRaw, mode: "insensitive" } },
+          { developer:  { contains: qRaw, mode: "insensitive" } },
+        ],
+      },
+    ];
+  }
+
   // Source type filter
   const focus = resolveMarketFocus(params);
   if (focus === "new") {
@@ -542,7 +563,23 @@ function matchesDistrict(l: NormalizedListing, district?: string): boolean {
   return false;
 }
 
+function matchesFreeText(l: NormalizedListing, q: string): boolean {
+  const haystack = [
+    l.estateName,
+    l.titleZh,
+    l.titleEn,
+    l.address,
+    l.developer,
+  ]
+    .filter((v): v is string => typeof v === "string" && v.length > 0)
+    .join(" ")
+    .toLowerCase();
+  return haystack.includes(q);
+}
+
 function matchesFilters(l: NormalizedListing, params: SearchParams): boolean {
+  const q = typeof params.q === "string" ? params.q.trim().toLowerCase() : "";
+  if (q && !matchesFreeText(l, q)) return false;
   if (params.district && !matchesDistrict(l, params.district)) return false;
   if (params.priceKnown && l.dataCompleteness === "partial") return false;
   const minFloor = Math.max(

@@ -127,6 +127,12 @@ export type BedroomFilter = number | "gte4" | "";
 
 // ─── Search / filter params ─────────────────────────────────────────────────
 export interface SearchParams {
+  /**
+   * Free-text query — case-insensitive substring match across
+   * estateName / titleZh / titleEn / address / developer. Example: "首岸".
+   * Even a single Chinese character matches (e.g. "首" finds 「首岸」).
+   */
+  q?: string;
   /** Canonical district label (Chinese) or any value stored in DB */
   district?: string;
   minPrice?: number;

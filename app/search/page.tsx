@@ -32,6 +32,7 @@ function parseMarketFocus(raw: string | undefined): MarketFocus | undefined {
 
 export async function generateMetadata({ searchParams }: PageProps): Promise<Metadata> {
   const params = await searchParams;
+  const nameQ = (params.q || "").trim();
   const district = params.district || "";
   const maxPrice =
     params.floor15m === "1"
@@ -57,7 +58,14 @@ export async function generateMetadata({ searchParams }: PageProps): Promise<Met
     params.minPrice && params.floor15m !== "1"
       ? `${Number(params.minPrice) / 10000}萬起`
       : "";
-  const parts = [district, focus, bedrooms, maxPrice, minPriceLabel].filter(Boolean);
+  const parts = [
+    nameQ ? `「${nameQ}」` : "",
+    district,
+    focus,
+    bedrooms,
+    maxPrice,
+    minPriceLabel,
+  ].filter(Boolean);
   const title = parts.length ? `${parts.join(" ")} 樓盤搜尋` : "搜尋樓盤";
 
   const description = parts.length
@@ -96,6 +104,7 @@ export default async function SearchPage({ searchParams }: PageProps) {
   const districtOptions = await getSearchDistrictOptions();
 
   const serviceParams: SearchParams = {
+    q: typeof params.q === "string" && params.q.trim() ? params.q.trim() : undefined,
     district: (params.district as SearchParams["district"]) || undefined,
     maxPrice: params.maxPrice ? Number(params.maxPrice) : undefined,
     minPrice: params.minPrice ? Number(params.minPrice) : undefined,

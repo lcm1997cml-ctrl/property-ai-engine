@@ -123,6 +123,7 @@ export default function SearchFilters({
   const [showAdvanced, setShowAdvanced] = useState(false);
 
   const current = {
+    q: searchParams.get("q") || "",
     district: searchParams.get("district") || "",
     region: searchParams.get("region") || "",
     focus: searchParams.get("focus") || "",
@@ -135,6 +136,9 @@ export default function SearchFilters({
     sortBy: searchParams.get("sortBy") || "",
     priceKnown: searchParams.get("priceKnown") || "",
   };
+
+  // Local input state for the free-text name-search box (debounced via submit).
+  const [nameInput, setNameInput] = useState(current.q);
 
   const activeAreaBucketId = useMemo(
     () => resolveAreaBucketId(current.minArea, current.maxArea),
@@ -215,6 +219,7 @@ export default function SearchFilters({
 
   const hasFilters = useMemo(
     () =>
+      Boolean(current.q) ||
       Boolean(current.district) ||
       Boolean(current.region) ||
       Boolean(current.focus) ||
@@ -228,6 +233,12 @@ export default function SearchFilters({
       Boolean(current.priceKnown),
     [current]
   );
+
+  /** Submit the name-search input — write `q` into URL. Empty = clear. */
+  function applyNameSearch(rawValue?: string) {
+    const value = (rawValue ?? nameInput).trim();
+    applyFilters({ q: value });
+  }
 
   /** Apply an area bucket (or clear it when id === ""). */
   function applyAreaBucket(id: string) {
@@ -250,6 +261,58 @@ export default function SearchFilters({
   return (
     <div className="bg-white rounded-xl border border-gray-200 shadow-sm p-4 mb-6">
       <div className="flex flex-col gap-3">
+
+        {/* ── 樓盤名稱搜尋（free-text）─────────────────────────────────── */}
+        <form
+          role="search"
+          onSubmit={(e) => {
+            e.preventDefault();
+            applyNameSearch();
+          }}
+          className="flex items-center gap-2"
+        >
+          <div className="relative flex-1">
+            <Search
+              size={15}
+              className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400 pointer-events-none"
+            />
+            <input
+              type="search"
+              value={nameInput}
+              onChange={(e) => setNameInput(e.target.value)}
+              placeholder="輸入樓盤名稱（例如：首岸、太古城、Coasto）"
+              className="w-full h-10 pl-9 pr-9 text-sm bg-white border border-gray-200 rounded-lg placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent transition-shadow"
+              autoComplete="off"
+              enterKeyHint="search"
+              aria-label="樓盤名稱搜尋"
+            />
+            {nameInput && (
+              <button
+                type="button"
+                onClick={() => {
+                  setNameInput("");
+                  applyNameSearch("");
+                }}
+                className="absolute right-2 top-1/2 -translate-y-1/2 p-1 text-gray-400 hover:text-gray-600"
+                aria-label="清除搜尋"
+              >
+                <X size={14} />
+              </button>
+            )}
+          </div>
+          <Button type="submit" size="sm" disabled={isPending} className="shrink-0">
+            搜尋
+          </Button>
+        </form>
+        {current.q && (
+          <div className="text-xs text-gray-500">
+            正在搜尋名稱包含
+            <span className="mx-1 px-1.5 py-0.5 bg-blue-50 text-blue-700 rounded font-medium">
+              {current.q}
+            </span>
+            的樓盤
+          </div>
+        )}
 
         {/* ── 熱門區域 quick-select chips ─────────────────────────────────── */}
         <div className="flex flex-wrap items-center gap-2">
